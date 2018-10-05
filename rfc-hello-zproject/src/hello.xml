@@ -1,0 +1,19 @@
+<class
+    name = "hello"
+    signature = "0"
+    title = "hello example protocol"
+    script = "zproto_codec_c"
+    package_dir = "../include"
+    source_dir = "."
+    export_macro = "RFC_HELLO_EXPORT"
+    project_header = "rfc_hello.h"
+    >
+
+	<message name = "OK">Ok message</message>
+	<message name = "ERROR">
+		Error message
+		<field name = "reason" type = "string" />
+	</message>
+	<message name = "HELLO">Hello message</message>
+
+</class>

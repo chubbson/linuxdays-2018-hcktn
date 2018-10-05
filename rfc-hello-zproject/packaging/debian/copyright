@@ -1,0 +1,7 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: rfc-hello
+
+Files: *
+Copyright: 2015- rfc-hello Developers <email@hostname.com>
+License: rfc-hello_license
+ Copyright (c) the Authors

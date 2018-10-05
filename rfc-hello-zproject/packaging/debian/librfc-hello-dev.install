@@ -1,0 +1,3 @@
+usr/include/*
+usr/lib/*/librfc_hello.so
+usr/lib/*/pkgconfig/librfc_hello.pc
