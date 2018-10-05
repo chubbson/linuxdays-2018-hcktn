@@ -3,15 +3,16 @@
 int
 main (int argc, char **argv) {
 
-    assert (argc >= 2);
+    assert (argc >= 3);
     printf ("Endpoint: '%s'\n", argv [1]);
+    printf ("Message: '%s'\n", argv [2]);
 
     zsock_t *socket = zsock_new_req ((const char *) argv [1]);
     assert (socket);
 
-    int rv = zstr_send (socket, "HELLO");
+    int rv = zstr_send (socket, argv [2]);
     assert (rv == 0);
-    printf ("Sent 'HELLO' string to PROVIDER.\n");
+    printf ("Sent '%s' string to PROVIDER.\n", argv [2]);
 
     zmsg_t *message = zmsg_recv (socket);
     assert (message);
@@ -20,7 +21,7 @@ main (int argc, char **argv) {
     char *string = zmsg_popstr (message);
     while (string) {
         printf (" %s", string);
-        zstr_free (&string);
+        string = zmsg_popstr (message);
     }
     printf ("\n");
 
