@@ -1,12 +1,12 @@
 #include <czmq.h>
 
 int
-main (int argc, char *argv) {
+main (int argc, char **argv) {
 
     assert (argc >= 2);
     printf ("Endpoint: '%s'\n", argv [1]);
 
-    zsock_t *socket = zsock_new_req (argv [1]);
+    zsock_t *socket = zsock_new_req ((const char *) argv [1]);
     assert (socket);
 
     int rv = zstr_send (socket, "HELLO");
@@ -20,7 +20,7 @@ main (int argc, char *argv) {
     char *string = zmsg_popstr (message);
     while (string) {
         printf (" %s", string);
-        zstr_free (&string)
+        zstr_free (&string);
     }
     printf ("\n");
 
