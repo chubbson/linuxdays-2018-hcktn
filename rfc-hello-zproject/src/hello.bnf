@@ -1,0 +1,23 @@
+The following ABNF grammar defines the hello example protocol:
+
+    hello           = *( OK | ERROR | HELLO )
+
+    ;  Ok message
+
+    OK              = signature %d1
+    signature       = %xAA %xA0             ; two octets
+
+    ;  Error message
+
+    ERROR           = signature %d2 reason
+    reason          = string                ;
+
+    ;  Hello message
+
+    HELLO           = signature %d3
+
+    ; Strings are always length + text contents
+    string          = number-1 *VCHAR
+
+    ; Numbers are unsigned integers in network byte order
+    number-1        = 1OCTET

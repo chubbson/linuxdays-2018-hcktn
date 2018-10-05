@@ -1,0 +1,23 @@
+<project 
+    name = "rfc-hello"
+    script = "zproject.gsl"
+    repository = "https://github.com/fmp88/rfc-hello.git"
+    >
+    <target name = "debian" />
+    <target name = "redhat" />
+    <target name = "jenkins" />
+    <target name = "travis" />
+
+    <use project = "czmq" />
+
+
+    <class name = "utils" state = "stable">Utils</class>
+    <class name = "baltree" state = "stable">balanced tree</class>
+    <class name = "hello" state = "stable">our protocol</class>
+
+    <main name = "rfc-hello-user">User peer</main>
+    <main name = "provider">Provider peer</main>
+    <main name = "justforsake">Provider peer</main>
+
+    <model name = "hello" codec = "zproto_codec_c" />
+</project>

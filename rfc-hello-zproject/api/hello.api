@@ -1,0 +1,102 @@
+<!--
+    hello - hello example protocol
+
+    Codec class for hello.
+
+    ** WARNING *************************************************************
+    THIS SOURCE FILE IS 100% GENERATED. If you edit this file, you will lose
+    your changes at the next build cycle. This is great for temporary printf
+    statements. DO NOT MAKE ANY CHANGES YOU WISH TO KEEP. The correct places
+    for commits are:
+
+     * The XML model used for this code generation: hello.xml, or
+     * The code generation script that built this file: zproto_codec_c
+    ************************************************************************
+ -->
+<class name = "hello">
+    <constant name = "ok" value = "1" >
+
+    </constant>
+    <constant name = "error" value = "2" >
+
+    </constant>
+    <constant name = "hello" value = "3" >
+
+    </constant>
+
+<constructor>
+    Create a new empty hello
+</constructor>
+
+<constructor name = "new_zpl">
+    Create a new hello from zpl/zconfig_t *
+    <argument name = "config" type = "zconfig" />
+</constructor>
+
+<destructor>
+    Destroy a hello instance
+</destructor>
+
+<method name = "dup">
+    Create a deep copy of a hello instance
+    <return type="hello" fresh="1" />
+</method>
+
+<method name = "recv">
+    Receive a hello from the socket. Returns 0 if OK, -1 if
+    there was an error. Blocks if there is no message waiting.
+    <argument name = "input" type = "zsock" />
+    <return type = "integer" />
+</method>
+
+<method name = "send">
+    Send the hello to the output socket, does not destroy it
+    <argument name = "output" type = "zsock" />
+    <return type = "integer" />
+</method>
+
+<method name = "print">
+    Print contents of message to stdout
+</method>
+
+<method name = "zpl">
+    Export class as zconfig_t*. Caller is responsibe for destroying the instance
+    <argument name = "parent" type = "zconfig" />
+    <return type = "zconfig" fresh = "1" />
+</method>
+
+
+<method name = "routing id">
+    Get the message routing id, as a frame
+    <return type = "zframe" />
+</method>
+
+<method name = "set routing id">
+    Set the message routing id from a frame
+    <argument name = "routing id" type = "zframe" />
+</method>
+
+<method name = "id">
+    Get the hello message id
+    <return type = "integer" />
+</method>
+
+<method name = "set id">
+    Set the hello message id
+    <argument name = "id" type = "integer" />
+</method>
+
+<method name = "command">
+    Get the hello message id as printable text
+    <return type = "string" />
+</method>
+
+<method name = "reason">
+    Get the reason field
+    <return type = "string" />
+</method>
+<method name = "set reason">
+    Set the reason field
+    <argument name = "reason" type = "string" />
+</method>
+</class>
