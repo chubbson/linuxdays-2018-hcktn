@@ -15,7 +15,7 @@ UPS peer publishes the following two messages on 'upses' STREAM channel:
 
 where 'name' is a unique name of a UPS and '/' indicates a multipart (string) message
 
-A UPS peer can simulate multiple UPSes.
+Eac UPS peer MUST publish  3 different 'name's with random 1-5 second intervals (simulate 3 devices).
 
 
 
