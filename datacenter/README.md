@@ -17,7 +17,7 @@ where 'name' is a unique name of a UPS and '/' indicates a multipart (string) me
 
 Each UPS peer MUST publish  3 different 'name's with random 1-5 second intervals (simulate 3 devices).
 
-The MONITOR peer subscribes to ".\*" (everything) on 'upses' STREAM channel and (for now) just prints stuff.
+The MONITOR peer subscribes to ".*" (everything) on 'upses' STREAM channel and (for now) just prints stuff.
 
 
 
