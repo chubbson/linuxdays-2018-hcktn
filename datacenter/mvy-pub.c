@@ -45,6 +45,7 @@ void
 pub_set_endpoint (pub_t *self, const char *endpoint)
 {
     assert (self);
+    assert (endpoint);
     zstr_free (&self->endpoint);
     self->endpoint = strdup (endpoint);
 }
@@ -60,6 +61,7 @@ void
 pub_set_name (pub_t *self, const char *name)
 {
     assert (self);
+    assert (name);
     zstr_free (&self->name);
     self->name = strdup (name);
 }
@@ -75,6 +77,7 @@ void
 pub_set_upsname (pub_t *self, const char *upsname)
 {
     assert (self);
+    assert (upsname);
     zstr_free (&self->upsname);
     self->upsname = strdup (upsname);
 }
@@ -125,6 +128,10 @@ pub_send (pub_t *self)
     mlm_client_sendx (self->client, self->name, self->name, is_on ? "ON" : "OFF", NULL);
 }
 
+// publishing actor
+// Pipe commands:
+//      CONNECT/$ENDPOINT:str/$CLIENT_NAME/$UPS_NAME    - connect to malamute $ENDPOINT as $CLIENT_NAME and publish data for $UPS_NAME
+//      $TERM - ends the actor
 static void
 s_pub_actor (zsock_t *pipe, void* args)
 {
@@ -136,20 +143,34 @@ s_pub_actor (zsock_t *pipe, void* args)
         void *sock = pub_wait (self);
 
         if (sock == pipe) {
-            char *endpoint;
-            char *name;
-            char *upsname;
-            zstr_recvx (pipe, &endpoint, &name, &upsname, NULL);
-            pub_set_endpoint (self, endpoint);
-            pub_set_name (self, name);
-            pub_set_upsname (self, upsname);
-            int r = pub_connect (self);
-            if (r != 0) {
-                zsys_error ("Connection to '%s' as '%s' failed", endpoint, name);
+            zmsg_t *msg = zmsg_recv (pipe);
+            char *command = zmsg_popstr (msg);
+            assert (command); // crash if there is nothing sent
+
+            if (streq (command, "$TERM")) {
+                break;
             }
-            zstr_free (&endpoint);
-            zstr_free (&name);
-            zstr_free (&upsname);
+            else
+            if (streq (command, "CONNECT")) {
+                char *endpoint = zmsg_popstr (msg);
+                char *name = zmsg_popstr (msg);
+                char *upsname = zmsg_popstr (msg);
+                pub_set_endpoint (self, endpoint);
+                pub_set_name (self, name);
+                pub_set_upsname (self, upsname);
+                int r = pub_connect (self);
+                if (r != 0) {
+                    zsys_error ("Connection to '%s' as '%s' failed", endpoint, name);
+                }
+                zstr_free (&endpoint);
+                zstr_free (&name);
+                zstr_free (&upsname);
+            }
+            else
+                zsys_warning ("Uknown command %s", command);
+            
+            zstr_free (&command);
+            zmsg_destroy (&msg);
         }
         else {
             pub_send (self);
@@ -163,11 +184,11 @@ s_pub_actor (zsock_t *pipe, void* args)
 int main () {
 
     zactor_t *a1 = zactor_new (s_pub_actor, NULL);
-    zstr_sendx (a1, ENDPOINT, "mvy-pub-1", "mvy-ups-1", NULL);
+    zstr_sendx (a1, "CONNECT", ENDPOINT, "mvy-pub-1", "mvy-ups-1", NULL);
     zactor_t *a2 = zactor_new (s_pub_actor, NULL);
-    zstr_sendx (a2, ENDPOINT, "mvy-pub-2", "mvy-ups-2", NULL);
+    zstr_sendx (a2, "CONNECT", ENDPOINT, "mvy-pub-2", "mvy-ups-2", NULL);
     zactor_t *a3 = zactor_new (s_pub_actor, NULL);
-    zstr_sendx (a3, ENDPOINT, "mvy-pub-3", "mvy-ups-3", NULL);
+    zstr_sendx (a3, "CONNECT", ENDPOINT, "mvy-pub-3", "mvy-ups-3", NULL);
 
     while (true) {
         char *message = zstr_recv (a1);
