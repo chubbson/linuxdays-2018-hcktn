@@ -36,6 +36,11 @@ publisher_actor (zsock_t *pipe, void *args)
                 zmsg_destroy (&message);
             }
 
+            if (streq (command, "$TERM")) {
+                zstr_free (&command);
+                zmsg_destroy (&message);
+                break;
+            }
             if (streq (command, "ENDPOINT")) {
                 printf ("Processing 'ENDPOINT' command\n");
                 int rv = mlm_client_connect (client, endpoint, 1000, "Flo");
@@ -57,9 +62,6 @@ publisher_actor (zsock_t *pipe, void *args)
 
                 rv = mlm_client_send (client, "Hello", &response);
                 assert (rv == 0);
-            }
-            else {
-                continue;
             }
 
             zstr_free (&command);
@@ -106,11 +108,14 @@ int main (int argc, char **argv) {
     printf("message received\n");
 
     char *something =  zmsg_popstr (msg);
-    assert (streq (something, "2Karol"));
+    assert (streq (something, "Karol"));
 
     zstr_free (&something);
+    zmsg_destroy (&msg);
 
     zactor_destroy (&publisher);
+    mlm_client_destroy (&listener);
+    zactor_destroy (&server);
     return EXIT_SUCCESS;
 
     //  Test 1
