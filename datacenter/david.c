@@ -1,6 +1,6 @@
 #include <malamute.h>
 
-// build: gcc -lmlm -lczmq -g  mvy-pubc -o mvy-pub 
+// build: gcc -lmlm -lczmq -g  david.c -o david 
 //20181006 - david hauri
 
 // serverpart by Karol
@@ -28,7 +28,7 @@ int main () {
     while(!zsys_interrupted)
     {
       
-      
+
     }
 
     mlm_client_destroy(&client);
