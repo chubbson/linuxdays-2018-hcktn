@@ -1,9 +1,10 @@
 #include <malamute.h>
 
 static const char *endpoint = "inproc://@/florian";
+static const char *stream_name = "abc";
 
 //  actor command ENDPOINT / "<endpoint>"
-//  actor command SEND / "<stream name>" / "<string>"
+//  actor command SEND / "<string>"
 
 static void
 publisher_actor (zsock_t *pipe, void *args)
@@ -36,31 +37,34 @@ publisher_actor (zsock_t *pipe, void *args)
             }
 
             if (streq (command, "ENDPOINT")) {
-                int rv = mlm_client_connect (client, endpoint, 1000, "upses");
+                printf ("Processing 'ENDPOINT' command\n");
+                int rv = mlm_client_connect (client, endpoint, 1000, "Flo");
                 assert (rv == 0);
-                rv = mlm_client_set_producer (client, "upses");
+                rv = mlm_client_set_producer (client, stream_name);
                 assert (rv >= 0);
             }
             else
             if (streq (command, "SEND")) {
+                printf ("Processing 'SEND' command\n");
+                char *what = zmsg_popstr (message);
+                assert (what);
+
                 zmsg_t *response = zmsg_new();
                 assert(response);
-                int rv = zmsg_addstr(response, "Karol");
+                int rv = zmsg_addstr (response, what);
                 assert (rv == 0);
+                zstr_free (&what);
 
-                mlm_client_send (client, "", &response);
-
-                zmsg_destroy (&response);
+                rv = mlm_client_send (client, "Hello", &response);
+                assert (rv == 0);
             }
             else {
+                continue;
             }
 
             zstr_free (&command);
             zmsg_destroy (&message);
-
-            
         }
-
     }
     zpoller_destroy (&poller);
     mlm_client_destroy (&client);
@@ -69,9 +73,7 @@ publisher_actor (zsock_t *pipe, void *args)
 
 int main (int argc, char **argv) {
 
-    zactor_t *publisher = zactor_new (publisher_actor, NULL);
-    assert (publisher);
-
+    //  Server
     zactor_t *server = zactor_new (mlm_server, "malamute");
     assert (server);
 
@@ -81,18 +83,23 @@ int main (int argc, char **argv) {
 
     zclock_sleep (500);
 
-    mlm_client_t *listener = mlm_client_new ();
-    assert (listener);
-
-    mlm_client_connect (listener, endpoint, 1000, "listener");
-    zclock_sleep (100);
-    mlm_client_set_consumer (listener, "upses", ".*");
-
-
+    //  Publisher
+    zactor_t *publisher = zactor_new (publisher_actor, NULL);
+    assert (publisher);
     zstr_sendx (publisher, "ENDPOINT", endpoint, NULL);
     zclock_sleep (100);
 
-    zstr_sendx (publisher, "SEND", "upses", "Karol", NULL);
+    //  Listener
+    mlm_client_t *listener = mlm_client_new ();
+    assert (listener);
+
+    int rv = mlm_client_connect (listener, endpoint, 1000, "listener");
+    assert (rv == 0);
+    rv = mlm_client_set_consumer (listener, stream_name, ".*");
+    assert (rv == 0);
+
+    //  Test #1
+    zstr_sendx (publisher, "SEND", "Karol", NULL);
 
     printf("before recv\n");
     zmsg_t *msg = mlm_client_recv (listener);
