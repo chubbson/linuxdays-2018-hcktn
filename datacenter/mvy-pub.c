@@ -101,10 +101,18 @@ pub_connect (pub_t *self)
     }
     r = mlm_client_set_producer (self->client, STREAM);
     if (r != 0) {
-        zsys_error ("cannot connect to STREAM %s", STREAM);
+        zsys_error ("cannot connect (producer) to STREAM %s", STREAM);
         mlm_client_destroy (&self->client);
         return -1;
     }
+    r = mlm_client_set_producer (self->client, STREAM);
+    if (r != 0) {
+        zsys_error ("cannot connect (consumer) to STREAM %s", STREAM);
+        mlm_client_destroy (&self->client);
+        return -1;
+    }
+
+
     zpoller_add (self->poller, mlm_client_msgpipe (self->client));
     self->interval = 1000 + (random () % 5000);
     return 0;
@@ -131,6 +139,7 @@ bool
 pub_is_mlm (pub_t *self, void *sock)
 {
     assert (self);
+    printf("%s self-name is %s\n", "pub_is_mlm", self->name);
     return sock == mlm_client_msgpipe (self->client);
 }
 
@@ -151,6 +160,7 @@ s_pub_actor (zsock_t *pipe, void* args)
         void *sock = pub_wait (self);
 
         if (sock == pipe) {
+            printf("%s\n", "sock == pipe -> recvMsg");
             zmsg_t *msg = zmsg_recv (pipe);
             char *command = zmsg_popstr (msg);
             assert (command); // crash if there is nothing sent
@@ -184,11 +194,23 @@ s_pub_actor (zsock_t *pipe, void* args)
         }
         else
         if (pub_is_mlm (self, sock)) {
+            printf("%s\n", "TODO part");
+
             // TODO: Problem: we do not print anything
             // Solution: put the printing code here
             // mlm_client_recv ...
+
+            zmsg_t *msg = mlm_client_recv(sock);
+            char *reply = zmsg_popstr(msg);
+
+            zsys_info("received: %s", reply);
+
+            free(&reply);
+            zmsg_destroy (&msg);
+
         }
         else {
+            printf("%s\n", "else Part pub_send");
             pub_send (self);
         }
     }
