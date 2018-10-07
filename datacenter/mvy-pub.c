@@ -2,7 +2,6 @@
 
 // build: gcc -lmlm -lczmq mvy-pub.c -o mvy-pub
 
-static const char *ENDPOINT = "tcp://192.168.1.164:9999";
 static const char *STREAM = "upses";
 
 typedef struct _pub_t {
@@ -45,6 +44,7 @@ void
 pub_set_endpoint (pub_t *self, const char *endpoint)
 {
     assert (self);
+    assert (endpoint);
     zstr_free (&self->endpoint);
     self->endpoint = strdup (endpoint);
 }
@@ -60,6 +60,7 @@ void
 pub_set_name (pub_t *self, const char *name)
 {
     assert (self);
+    assert (name);
     zstr_free (&self->name);
     self->name = strdup (name);
 }
@@ -75,6 +76,7 @@ void
 pub_set_upsname (pub_t *self, const char *upsname)
 {
     assert (self);
+    assert (upsname);
     zstr_free (&self->upsname);
     self->upsname = strdup (upsname);
 }
@@ -125,31 +127,66 @@ pub_send (pub_t *self)
     mlm_client_sendx (self->client, self->name, self->name, is_on ? "ON" : "OFF", NULL);
 }
 
+bool
+pub_is_mlm (pub_t *self, void *sock)
+{
+    assert (self);
+    return sock == mlm_client_msgpipe (self->client);
+}
+
+// publishing actor
+// Pipe commands:
+//      CONNECT/$ENDPOINT:str/$CLIENT_NAME/$UPS_NAME    - connect to malamute $ENDPOINT as $CLIENT_NAME and publish data for $UPS_NAME
+//      $TERM - ends the actor
 static void
 s_pub_actor (zsock_t *pipe, void* args)
 {
-    pub_t *self = pub_new (pipe);
-    zsock_signal (pipe, 0);
+    pub_t *self = pub_new (pipe);       // <- this runs in MAIN THREAD
+    zsock_signal (pipe, 0);             // thread is started from here
 
+    // THIS RUNS IN SEPARATE THREAD
+    // vvvvv
     while (!zsys_interrupted)
     {
         void *sock = pub_wait (self);
 
         if (sock == pipe) {
-            char *endpoint;
-            char *name;
-            char *upsname;
-            zstr_recvx (pipe, &endpoint, &name, &upsname, NULL);
-            pub_set_endpoint (self, endpoint);
-            pub_set_name (self, name);
-            pub_set_upsname (self, upsname);
-            int r = pub_connect (self);
-            if (r != 0) {
-                zsys_error ("Connection to '%s' as '%s' failed", endpoint, name);
+            zmsg_t *msg = zmsg_recv (pipe);
+            char *command = zmsg_popstr (msg);
+            assert (command); // crash if there is nothing sent
+
+            if (streq (command, "$TERM")) {
+                zstr_free (&command);
+                zmsg_destroy (&msg);
+                break;
             }
-            zstr_free (&endpoint);
-            zstr_free (&name);
-            zstr_free (&upsname);
+            else
+            if (streq (command, "CONNECT")) {
+                char *endpoint = zmsg_popstr (msg);
+                char *name = zmsg_popstr (msg);
+                char *upsname = zmsg_popstr (msg);
+                pub_set_endpoint (self, endpoint);
+                pub_set_name (self, name);
+                pub_set_upsname (self, upsname);
+                int r = pub_connect (self);
+                if (r != 0) {
+                    zsys_error ("Connection to '%s' as '%s' failed", endpoint, name);
+                }
+                zstr_free (&endpoint);
+                zstr_free (&name);
+                zstr_free (&upsname);
+            }
+            else
+                zsys_warning ("Uknown command %s", command);
+            
+            zstr_free (&command);
+            zmsg_destroy (&msg);
+        }
+        else
+        if (pub_is_mlm (self, sock)) {
+            // TODO: Problem: we do not print anything
+            // Solution: put the printing code here
+            // mlm_client_recv ...
         }
         else {
             pub_send (self);
@@ -162,12 +199,16 @@ s_pub_actor (zsock_t *pipe, void* args)
 
 int main () {
 
+    static const char *ENDPOINT = "inproc://test";
+    zactor_t *server = zactor_new (mlm_server, "Malamute");
+    zstr_sendx (server, "BIND", ENDPOINT, NULL);
+
     zactor_t *a1 = zactor_new (s_pub_actor, NULL);
-    zstr_sendx (a1, ENDPOINT, "mvy-pub-1", "mvy-ups-1", NULL);
+    zstr_sendx (zactor_sock (a1), "CONNECT", ENDPOINT, "mvy-pub-1", "mvy-ups-1", NULL);
     zactor_t *a2 = zactor_new (s_pub_actor, NULL);
-    zstr_sendx (a2, ENDPOINT, "mvy-pub-2", "mvy-ups-2", NULL);
+    zstr_sendx (a2, "CONNECT", ENDPOINT, "mvy-pub-2", "mvy-ups-2", NULL);
     zactor_t *a3 = zactor_new (s_pub_actor, NULL);
-    zstr_sendx (a3, ENDPOINT, "mvy-pub-3", "mvy-ups-3", NULL);
+    zstr_sendx (a3, "CONNECT", ENDPOINT, "mvy-pub-3", "mvy-ups-3", NULL);
 
     while (true) {
         char *message = zstr_recv (a1);
@@ -184,5 +225,7 @@ int main () {
     zactor_destroy (&a3);
     zactor_destroy (&a2);
     zactor_destroy (&a1);
+
+    zactor_destroy (&server);
 
 }
