@@ -2,8 +2,11 @@
 
 // build: gcc -lmlm -lczmq -g  david_monitor.c -o david_monitor
 
-int main () {
+static const char *STREAM = "upses";
 
-  
+int main () {
+    printf("MALAMUTE MONITOR\n");
+
+    
     return EXIT_SUCCESS;
 }
