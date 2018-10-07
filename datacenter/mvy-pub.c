@@ -105,7 +105,7 @@ pub_connect (pub_t *self)
         mlm_client_destroy (&self->client);
         return -1;
     }
-    r = mlm_client_set_producer (self->client, STREAM);
+    r = mlm_client_set_consumer (self->client, STREAM, ".*");
     if (r != 0) {
         zsys_error ("cannot connect (consumer) to STREAM %s", STREAM);
         mlm_client_destroy (&self->client);
