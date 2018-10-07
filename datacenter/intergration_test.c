@@ -1,5 +1,6 @@
 #include <malamute.h>
 
+static const char *endpoint = "inproc://@/florian";
 
 //  actor command ENDPOINT / "<endpoint>"
 //  actor command SEND / "<stream name>" / "<string>"
@@ -35,11 +36,21 @@ publisher_actor (zsock_t *pipe, void *args)
             }
 
             if (streq (command, "ENDPOINT")) {
-                int rv = mlm_client_connect ();
+                int rv = mlm_client_connect (client, endpoint, 1000, "upses");
                 assert (rv == 0);
+                rv = mlm_client_set_producer (client, "upses");
+                assert (rv >= 0);
             }
             else
             if (streq (command, "SEND")) {
+                zmsg_t *response = zmsg_new();
+                assert(response);
+                int rv = zmsg_addstr(response, "Karol");
+                assert (rv == 0);
+
+                mlm_client_send (client, "", &response);
+
+                zmsg_destroy (&response);
             }
             else {
             }
@@ -51,14 +62,12 @@ publisher_actor (zsock_t *pipe, void *args)
         }
 
     }
-    zpoller_festroy (&poller);
+    zpoller_destroy (&poller);
     mlm_client_destroy (&client);
 }
 
-static const char *endpoint = "inproc://@/florian"
 
-int
-main (int argc, char **argv) {
+int main (int argc, char **argv) {
 
     zactor_t *publisher = zactor_new (publisher_actor, NULL);
     assert (publisher);
@@ -66,32 +75,33 @@ main (int argc, char **argv) {
     zactor_t *server = zactor_new (mlm_server, "malamute");
     assert (server);
 
-    zstr_send (server, "VERBOSE");
+    //zstr_send (server, "VERBOSE");
     zstr_sendx (server, "BIND", endpoint, NULL);
     zstr_sendx (server, "SET", "server/timeout", "10000", NULL);    
 
     zclock_sleep (500);
 
     mlm_client_t *listener = mlm_client_new ();
-    assert (client);
+    assert (listener);
 
-    mlm_client_connect ();
-    mlm_client_set_consumer ();
+    mlm_client_connect (listener, endpoint, 1000, "listener");
+    zclock_sleep (100);
+    mlm_client_set_consumer (listener, "upses", ".*");
 
 
     zstr_sendx (publisher, "ENDPOINT", endpoint, NULL);
-    zslock_sleep (100);
+    zclock_sleep (100);
 
     zstr_sendx (publisher, "SEND", "upses", "Karol", NULL);
 
-    zmsg_t *msg = mlm_client_recv ();
+    printf("before recv\n");
+    zmsg_t *msg = mlm_client_recv (listener);
+    printf("message received\n");
 
-    char *soemthing =  zmsg_popstr ();
-    assert (
+    char *something =  zmsg_popstr (msg);
+    assert (streq (something, "2Karol"));
 
-
-
-
+    zstr_free (&something);
 
     zactor_destroy (&publisher);
     return EXIT_SUCCESS;
