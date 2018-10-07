@@ -10,6 +10,11 @@ static const char *STREAM = "upses";
 static const char *SIGNAL_ON = "ON";
 static const char *SIGNAL_OFF = "OFF";
 
+int randSeconds1to5()
+{
+  return randof(1000) * 1 + 1
+}
+
 int main () {
     mlm_client_t *client = mlm_client_new();
     assert(client);
@@ -17,9 +22,12 @@ int main () {
     int rv = mlm_client_connect(client, ENDPOINT, 2000, "david");
     assert(rv >= 0);
 
+    srandom ((unsigned) time (NULL));
+
     while(!zsys_interrupted)
     {
-    
+      
+
     }
 
     mlm_client_destroy(&client);
